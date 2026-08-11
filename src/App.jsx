@@ -1,6 +1,6 @@
 import { Mail, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import profileImage from './assets/arsalan-profile.jpeg';
+import profileImage from './assets/arsalan-developer.webp';
 import { projects } from './data/projects';
 
 const links = ['home', 'about', 'skills', 'services', 'experience', 'projects', 'certifications', 'resume', 'contact'];
