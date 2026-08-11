@@ -1,5 +1,5 @@
 import { Mail, Menu, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import profileImage from './assets/arsalan-profile.jpeg';
 import { projects } from './data/projects';
 
@@ -33,6 +33,32 @@ export default function App() {
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [formErrors, setFormErrors] = useState({});
 
+  useEffect(() => {
+    const elements = document.querySelectorAll(
+      '.section, .skill, .service-card, .experience, .education, .projects-empty, .certification-card, .resume-card, .contact-form'
+    );
+
+    elements.forEach((element, index) => {
+      element.classList.add('reveal');
+      element.style.setProperty('--reveal-delay', `${(index % 4) * 90}ms`);
+    });
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -50px' }
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, []);
+
   const updateField = ({ target: { name, value } }) => {
     setFormData((current) => ({ ...current, [name]: value }));
     setFormErrors((current) => ({ ...current, [name]: '' }));
@@ -56,6 +82,8 @@ export default function App() {
   return (
     <>
       <a className="skip-link" href="#main-content">Skip to main content</a>
+      <div className="ambient-light ambient-one" aria-hidden="true" />
+      <div className="ambient-light ambient-two" aria-hidden="true" />
       <header className="nav-wrap">
         <nav className="nav container" aria-label="Main navigation">
           <a className="logo" href="#home">AP<span>.</span></a>
