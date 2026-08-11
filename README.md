@@ -2,6 +2,10 @@
 
 A modern and responsive personal portfolio website created to present my professional profile, technical skills, services, education, internship experience and contact information.
 
+## Live Demo
+
+[View the deployed portfolio](https://arsalan-pathan-portfolio.vercel.app/)
+
 ## Features
 
 - Responsive navigation with a mobile menu
