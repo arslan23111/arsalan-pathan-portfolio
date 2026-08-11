@@ -24,3 +24,6 @@ Thumbs.db
 # Local work folders
 work/
 outputs/
+
+# Local backend data
+backend/**/Data/*.json

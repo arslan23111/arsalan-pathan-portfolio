@@ -32,6 +32,8 @@ export default function App() {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', phone: '', subject: '', message: '' });
   const [formErrors, setFormErrors] = useState({});
+  const [formStatus, setFormStatus] = useState({ type: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const elements = document.querySelectorAll(
@@ -62,9 +64,10 @@ export default function App() {
   const updateField = ({ target: { name, value } }) => {
     setFormData((current) => ({ ...current, [name]: value }));
     setFormErrors((current) => ({ ...current, [name]: '' }));
+    setFormStatus({ type: '', message: '' });
   };
 
-  const submitContact = (event) => {
+  const submitContact = async (event) => {
     event.preventDefault();
     const errors = {};
     if (formData.name.trim().length < 2) errors.name = 'Please enter your name.';
@@ -75,8 +78,27 @@ export default function App() {
     setFormErrors(errors);
     if (Object.keys(errors).length) return;
 
-    const body = `Name: ${formData.name}\nEmail: ${formData.email}\nPhone: ${formData.phone || 'Not provided'}\n\n${formData.message}`;
-    window.location.href = `mailto:lalaarslanpathan14@gmail.com?subject=${encodeURIComponent(formData.subject)}&body=${encodeURIComponent(body)}`;
+    setIsSubmitting(true);
+    setFormStatus({ type: '', message: '' });
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5075';
+      const response = await fetch(`${apiUrl}/api/contact-messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || 'Unable to send your message. Please try again.');
+
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
+      setFormStatus({ type: 'success', message: result.message });
+    } catch (error) {
+      setFormStatus({ type: 'error', message: error.message });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -227,7 +249,8 @@ export default function App() {
                 <label>Subject<input name="subject" value={formData.subject} onChange={updateField} placeholder="Project inquiry" />{formErrors.subject && <small>{formErrors.subject}</small>}</label>
               </div>
               <label>Message<textarea name="message" rows="5" value={formData.message} onChange={updateField} placeholder="Tell me about your project..." />{formErrors.message && <small>{formErrors.message}</small>}</label>
-              <button className="btn primary" type="submit">Send Message</button>
+              {formStatus.message && <p className={`form-status ${formStatus.type}`} role="status">{formStatus.message}</p>}
+              <button className="btn primary" type="submit" disabled={isSubmitting}>{isSubmitting ? 'Sending...' : 'Send Message'}</button>
             </form>
           </div>
         </section>
