@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace Portfolio.Api.Models;
+namespace Portfolio.Application.Contacts;
 
 public sealed class CreateContactMessageRequest
 {

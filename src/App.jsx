@@ -1,7 +1,6 @@
 import { Mail, Menu, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import profileImage from './assets/arsalan-developer.webp';
-import { projects } from './data/projects';
 
 const links = ['home', 'about', 'skills', 'services', 'experience', 'projects', 'certifications', 'resume', 'contact'];
 
@@ -34,6 +33,22 @@ export default function App() {
   const [formErrors, setFormErrors] = useState({});
   const [formStatus, setFormStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [projects, setProjects] = useState([]);
+
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5075';
+    fetch(`${apiUrl}/api/projects`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((data) => setProjects(data.map((project) => ({
+        ...project,
+        image: project.imageUrl,
+        technologies: project.technologies.split(',').map((item) => item.trim()).filter(Boolean),
+        features: project.features.split(',').map((item) => item.trim()).filter(Boolean),
+        github: project.gitHubUrl,
+        demo: project.liveDemoUrl,
+      }))))
+      .catch(() => setProjects([]));
+  }, []);
 
   useEffect(() => {
     const elements = document.querySelectorAll(
@@ -183,7 +198,7 @@ export default function App() {
             <div className="projects-grid">
               {projects.map((project) => (
                 <article className="project-card" key={project.title}>
-                  <img src={project.image} alt={`${project.title} project preview`} loading="lazy" />
+                  {project.image && <img src={project.image} alt={`${project.title} project preview`} loading="lazy" />}
                   <div className="project-content">
                     <h3>{project.title}</h3>
                     <p>{project.description}</p>

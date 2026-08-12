@@ -27,3 +27,6 @@ outputs/
 
 # Local backend data
 backend/**/Data/*.json
+backend/**/bin/
+backend/**/obj/
+backend/Portfolio.Api/appsettings.Local.json

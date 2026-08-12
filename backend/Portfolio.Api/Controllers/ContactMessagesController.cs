@@ -1,13 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Portfolio.Api.Models;
-using Portfolio.Api.Services;
+using Portfolio.Application.Contacts;
 
 namespace Portfolio.Api.Controllers;
 
 [ApiController]
 [Route("api/contact-messages")]
-public sealed class ContactMessagesController(IContactMessageRepository repository) : ControllerBase
+public sealed class ContactMessagesController(CreateContactMessageService service, ContactMessageAdminService adminService) : ControllerBase
 {
     [HttpPost]
     [EnableRateLimiting("ContactForm")]
@@ -18,16 +17,7 @@ public sealed class ContactMessagesController(IContactMessageRepository reposito
         CreateContactMessageRequest request,
         CancellationToken cancellationToken)
     {
-        var message = new ContactMessage
-        {
-            Name = request.Name.Trim(),
-            Email = request.Email.Trim().ToLowerInvariant(),
-            Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
-            Subject = request.Subject.Trim(),
-            Message = request.Message.Trim()
-        };
-
-        var created = await repository.CreateAsync(message, cancellationToken);
+        var created = await service.ExecuteAsync(request, cancellationToken);
 
         return StatusCode(StatusCodes.Status201Created, new
         {
@@ -35,4 +25,16 @@ public sealed class ContactMessagesController(IContactMessageRepository reposito
             message = "Your message has been received successfully."
         });
     }
+
+    [Authorize(Roles = "Admin"), HttpGet]
+    public async Task<IActionResult> GetAll(CancellationToken token) => Ok(await adminService.GetAllAsync(token));
+
+    [Authorize(Roles = "Admin"), HttpPatch("{id:guid}/read")]
+    public async Task<IActionResult> SetRead(Guid id, [FromQuery] bool value, CancellationToken token) =>
+        await adminService.SetReadStatusAsync(id, value, token) ? NoContent() : NotFound();
+
+    [Authorize(Roles = "Admin"), HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken token) =>
+        await adminService.DeleteAsync(id, token) ? NoContent() : NotFound();
 }
+using Microsoft.AspNetCore.Authorization;
