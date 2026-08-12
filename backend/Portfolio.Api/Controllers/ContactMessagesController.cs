@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Portfolio.Application.Contacts;
@@ -37,4 +38,3 @@ public sealed class ContactMessagesController(CreateContactMessageService servic
     public async Task<IActionResult> Delete(Guid id, CancellationToken token) =>
         await adminService.DeleteAsync(id, token) ? NoContent() : NotFound();
 }
-using Microsoft.AspNetCore.Authorization;

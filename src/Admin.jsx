@@ -10,6 +10,7 @@ export default function Admin() {
   const [projects, setProjects] = useState([]);
   const [messages, setMessages] = useState([]);
   const [status, setStatus] = useState('');
+  const [editingId, setEditingId] = useState(null);
 
   const loadProjects = async () => {
     const response = await fetch(`${apiUrl}/api/projects`);
@@ -40,16 +41,30 @@ export default function Admin() {
     setStatus(response.ok ? 'Login successful.' : 'Invalid email or password.');
   };
 
-  const addProject = async (event) => {
+  const saveProject = async (event) => {
     event.preventDefault();
-    const response = await fetch(`${apiUrl}/api/projects`, {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(project),
+    const response = await fetch(`${apiUrl}/api/projects${editingId ? `/${editingId}` : ''}`, {
+      method: editingId ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(project),
     });
     if (response.ok) {
       setProject(emptyProject);
-      setStatus('Project added successfully.');
+      setEditingId(null);
+      setStatus(editingId ? 'Project updated successfully.' : 'Project added successfully.');
       loadProjects();
-    } else setStatus('Unable to add project. Please check all fields.');
+    } else setStatus('Unable to save project. Please check all fields.');
+  };
+
+  const editProject = (item) => {
+    setEditingId(item.id);
+    setProject(Object.fromEntries(Object.keys(emptyProject).map((key) => [key, item[key] || ''])));
+    setStatus('Editing selected project.');
+    document.getElementById('project-form')?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setProject(emptyProject);
+    setStatus('');
   };
 
   const deleteProject = async (id) => {
@@ -71,6 +86,14 @@ export default function Admin() {
     if (response.ok) loadMessages();
   };
 
+  const logout = async () => {
+    await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    setAuthenticated(false);
+    setLogin({ email: '', password: '' });
+    setMessages([]);
+    setStatus('You have been logged out.');
+  };
+
   if (!authenticated) return (
     <main className="admin-page"><form className="admin-card" onSubmit={submitLogin}>
       <a href="/">← Back to Portfolio</a><h1>Admin Login</h1><p>Manage your portfolio content.</p>
@@ -81,16 +104,17 @@ export default function Admin() {
   );
 
   return <main className="admin-page"><div className="admin-shell">
-    <header className="admin-header"><div><p className="eyebrow">PORTFOLIO ADMIN</p><h1>Projects</h1></div><a href="/">View Portfolio</a></header>
-    <form className="admin-card admin-form" onSubmit={addProject}>
-      <h2>Add New Project</h2>
+    <header className="admin-header"><div><p className="eyebrow">PORTFOLIO ADMIN</p><h1>Dashboard</h1></div><div className="admin-top-actions"><a href="/">View Portfolio</a><button onClick={logout}>Logout</button></div></header>
+    <nav className="admin-nav"><a href="#project-form">Add Project</a><a href="#saved-projects">Projects ({projects.length})</a><a href="#messages">Messages ({messages.length})</a></nav>
+    <form id="project-form" className="admin-card admin-form" onSubmit={saveProject}>
+      <h2>{editingId ? 'Edit Project' : 'Add New Project'}</h2>
       {Object.keys(emptyProject).map((name) => <label key={name}>{name.replace(/([A-Z])/g, ' $1')}
         {name === 'description' || name === 'features' ? <textarea required={name === 'description'} value={project[name]} onChange={(e) => setProject({ ...project, [name]: e.target.value })} /> : <input type={name.toLowerCase().includes('url') ? 'url' : 'text'} required={['title','technologies'].includes(name)} value={project[name]} onChange={(e) => setProject({ ...project, [name]: e.target.value })} />}
       </label>)}
-      {status && <p className="admin-status">{status}</p>}<button className="btn primary">Add Project</button>
+      {status && <p className="admin-status">{status}</p>}<div className="admin-form-actions"><button className="btn primary">{editingId ? 'Save Changes' : 'Add Project'}</button>{editingId && <button type="button" className="btn secondary" onClick={cancelEdit}>Cancel</button>}</div>
     </form>
-    <section className="admin-list"><h2>Saved Projects</h2>{projects.length ? projects.map((item) => <article className="admin-project" key={item.id}><div><h3>{item.title}</h3><p>{item.technologies}</p></div><button onClick={() => deleteProject(item.id)}>Delete</button></article>) : <p>No projects added yet.</p>}</section>
-    <section className="admin-list"><h2>Contact Messages</h2>{messages.length ? messages.map((item) => <article className={`admin-message ${item.isRead ? 'read' : ''}`} key={item.id}>
+    <section id="saved-projects" className="admin-list"><h2>Saved Projects</h2>{projects.length ? projects.map((item) => <article className="admin-project" key={item.id}><div><h3>{item.title}</h3><p>{item.technologies}</p></div><div className="project-actions"><button className="edit" onClick={() => editProject(item)}>Edit</button><button onClick={() => deleteProject(item.id)}>Delete</button></div></article>) : <p>No projects added yet.</p>}</section>
+    <section id="messages" className="admin-list"><h2>Contact Messages</h2>{messages.length ? messages.map((item) => <article className={`admin-message ${item.isRead ? 'read' : ''}`} key={item.id}>
       <div className="message-meta"><span className="message-badge">{item.isRead ? 'Read' : 'New'}</span><time>{new Date(item.createdAt).toLocaleString()}</time></div>
       <h3>{item.subject}</h3><p><strong>{item.name}</strong> · <a href={`mailto:${item.email}`}>{item.email}</a>{item.phone && ` · ${item.phone}`}</p><p>{item.message}</p>
       <div className="message-actions"><button onClick={() => toggleMessage(item)}>Mark as {item.isRead ? 'Unread' : 'Read'}</button><button className="danger" onClick={() => deleteMessage(item.id)}>Delete</button></div>

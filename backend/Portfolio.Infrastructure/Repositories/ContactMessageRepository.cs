@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Portfolio.Application.Abstractions;
 using Portfolio.Domain.Entities;
 using Portfolio.Infrastructure.Persistence;
@@ -34,4 +35,3 @@ public sealed class ContactMessageRepository(PortfolioDbContext dbContext) : ICo
         return true;
     }
 }
-using Microsoft.EntityFrameworkCore;
