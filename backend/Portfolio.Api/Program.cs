@@ -5,11 +5,18 @@ using Portfolio.Api.Services;
 using Portfolio.Application.Abstractions;
 using Portfolio.Application.Contacts;
 using Portfolio.Application.Projects;
+using Portfolio.Infrastructure;
 using Portfolio.Infrastructure.Persistence;
 using Portfolio.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+
+var renderPort = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(renderPort))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{renderPort}");
+}
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<AdminCredentialValidator>();
@@ -18,7 +25,10 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.Cookie.Name = "portfolio_admin";
         options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = SameSiteMode.Lax;
+        options.Cookie.SameSite = builder.Environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None;
+        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
+            ? CookieSecurePolicy.SameAsRequest
+            : CookieSecurePolicy.Always;
         options.ExpireTimeSpan = TimeSpan.FromHours(2);
         options.Events.OnRedirectToLogin = context =>
         {
@@ -37,8 +47,11 @@ builder.Services.AddScoped<ContactMessageAdminService>();
 builder.Services.AddScoped<ProjectService>();
 builder.Services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
-builder.Services.AddDbContext<PortfolioDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("PortfolioDatabase")));
+var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "SqlServer";
+var databaseConnection = builder.Configuration.GetConnectionString("PortfolioDatabase")
+    ?? throw new InvalidOperationException("Portfolio database connection string is missing.");
+
+builder.Services.AddPortfolioDatabase(databaseProvider, databaseConnection);
 
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
@@ -72,22 +85,25 @@ using (var scope = app.Services.CreateScope())
 {
     var database = scope.ServiceProvider.GetRequiredService<PortfolioDbContext>();
     database.Database.EnsureCreated();
-    database.Database.ExecuteSqlRaw("""
-        IF OBJECT_ID(N'[dbo].[Projects]', N'U') IS NULL
-        BEGIN
-            CREATE TABLE [dbo].[Projects] (
-                [Id] uniqueidentifier NOT NULL PRIMARY KEY,
-                [Title] nvarchar(150) NOT NULL,
-                [Description] nvarchar(2000) NOT NULL,
-                [ImageUrl] nvarchar(500) NULL,
-                [Technologies] nvarchar(500) NOT NULL,
-                [Features] nvarchar(1500) NOT NULL,
-                [GitHubUrl] nvarchar(500) NULL,
-                [LiveDemoUrl] nvarchar(500) NULL,
-                [CreatedAt] datetimeoffset NOT NULL
-            );
-        END
-        """);
+    if (database.Database.IsSqlServer())
+    {
+        database.Database.ExecuteSqlRaw("""
+            IF OBJECT_ID(N'[dbo].[Projects]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[Projects] (
+                    [Id] uniqueidentifier NOT NULL PRIMARY KEY,
+                    [Title] nvarchar(150) NOT NULL,
+                    [Description] nvarchar(2000) NOT NULL,
+                    [ImageUrl] nvarchar(500) NULL,
+                    [Technologies] nvarchar(500) NOT NULL,
+                    [Features] nvarchar(1500) NOT NULL,
+                    [GitHubUrl] nvarchar(500) NULL,
+                    [LiveDemoUrl] nvarchar(500) NULL,
+                    [CreatedAt] datetimeoffset NOT NULL
+                );
+            END
+            """);
+    }
 }
 
 app.UseCors("PortfolioFrontend");
