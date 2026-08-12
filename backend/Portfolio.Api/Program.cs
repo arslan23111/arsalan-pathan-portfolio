@@ -1,5 +1,5 @@
 using System.Threading.RateLimiting;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Portfolio.Api.Services;
 using Portfolio.Application.Abstractions;
@@ -10,7 +10,10 @@ using Portfolio.Infrastructure.Persistence;
 using Portfolio.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: false);
+}
 
 var renderPort = Environment.GetEnvironmentVariable("PORT");
 if (!string.IsNullOrWhiteSpace(renderPort))
@@ -20,27 +23,10 @@ if (!string.IsNullOrWhiteSpace(renderPort))
 
 builder.Services.AddControllers();
 builder.Services.AddScoped<AdminCredentialValidator>();
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
-    .AddCookie(options =>
-    {
-        options.Cookie.Name = "portfolio_admin";
-        options.Cookie.HttpOnly = true;
-        options.Cookie.SameSite = builder.Environment.IsDevelopment() ? SameSiteMode.Lax : SameSiteMode.None;
-        options.Cookie.SecurePolicy = builder.Environment.IsDevelopment()
-            ? CookieSecurePolicy.SameAsRequest
-            : CookieSecurePolicy.Always;
-        options.ExpireTimeSpan = TimeSpan.FromHours(2);
-        options.Events.OnRedirectToLogin = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            return Task.CompletedTask;
-        };
-        options.Events.OnRedirectToAccessDenied = context =>
-        {
-            context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            return Task.CompletedTask;
-        };
-    });
+builder.Services.AddScoped<AdminTokenService>();
+builder.Services.AddAuthentication(AdminTokenAuthenticationHandler.SchemeName)
+    .AddScheme<AuthenticationSchemeOptions, AdminTokenAuthenticationHandler>(
+        AdminTokenAuthenticationHandler.SchemeName, _ => { });
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<CreateContactMessageService>();
 builder.Services.AddScoped<ContactMessageAdminService>();

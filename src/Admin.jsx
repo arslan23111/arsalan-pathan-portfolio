@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5075';
+const tokenKey = 'portfolio_admin_token';
+const authHeaders = () => {
+  const token = sessionStorage.getItem(tokenKey);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 const emptyProject = { title: '', description: '', imageUrl: '', technologies: '', features: '', gitHubUrl: '', liveDemoUrl: '' };
 
 export default function Admin() {
@@ -18,12 +23,12 @@ export default function Admin() {
   };
 
   const loadMessages = async () => {
-    const response = await fetch(`${apiUrl}/api/contact-messages`, { credentials: 'include' });
+    const response = await fetch(`${apiUrl}/api/contact-messages`, { headers: authHeaders() });
     if (response.ok) setMessages(await response.json());
   };
 
   useEffect(() => {
-    fetch(`${apiUrl}/api/auth/me`, { credentials: 'include' })
+    fetch(`${apiUrl}/api/auth/me`, { headers: authHeaders() })
       .then((response) => {
         setAuthenticated(response.ok);
         if (response.ok) loadMessages();
@@ -34,8 +39,12 @@ export default function Admin() {
   const submitLogin = async (event) => {
     event.preventDefault();
     const response = await fetch(`${apiUrl}/api/auth/login`, {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(login),
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(login),
     });
+    if (response.ok) {
+      const result = await response.json();
+      sessionStorage.setItem(tokenKey, result.token);
+    }
     setAuthenticated(response.ok);
     if (response.ok) loadMessages();
     setStatus(response.ok ? 'Login successful.' : 'Invalid email or password.');
@@ -44,7 +53,7 @@ export default function Admin() {
   const saveProject = async (event) => {
     event.preventDefault();
     const response = await fetch(`${apiUrl}/api/projects${editingId ? `/${editingId}` : ''}`, {
-      method: editingId ? 'PUT' : 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(project),
+      method: editingId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(project),
     });
     if (response.ok) {
       setProject(emptyProject);
@@ -69,25 +78,26 @@ export default function Admin() {
 
   const deleteProject = async (id) => {
     if (!window.confirm('Delete this project?')) return;
-    const response = await fetch(`${apiUrl}/api/projects/${id}`, { method: 'DELETE', credentials: 'include' });
+    const response = await fetch(`${apiUrl}/api/projects/${id}`, { method: 'DELETE', headers: authHeaders() });
     if (response.ok) loadProjects();
   };
 
   const toggleMessage = async (item) => {
     const response = await fetch(`${apiUrl}/api/contact-messages/${item.id}/read?value=${!item.isRead}`, {
-      method: 'PATCH', credentials: 'include',
+      method: 'PATCH', headers: authHeaders(),
     });
     if (response.ok) loadMessages();
   };
 
   const deleteMessage = async (id) => {
     if (!window.confirm('Delete this message?')) return;
-    const response = await fetch(`${apiUrl}/api/contact-messages/${id}`, { method: 'DELETE', credentials: 'include' });
+    const response = await fetch(`${apiUrl}/api/contact-messages/${id}`, { method: 'DELETE', headers: authHeaders() });
     if (response.ok) loadMessages();
   };
 
   const logout = async () => {
-    await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST', credentials: 'include' });
+    await fetch(`${apiUrl}/api/auth/logout`, { method: 'POST', headers: authHeaders() });
+    sessionStorage.removeItem(tokenKey);
     setAuthenticated(false);
     setLogin({ email: '', password: '' });
     setMessages([]);
