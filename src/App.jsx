@@ -34,6 +34,7 @@ export default function App() {
   const [formStatus, setFormStatus] = useState({ type: '', message: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [certificates, setCertificates] = useState([]);
 
   useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5075';
@@ -48,6 +49,10 @@ export default function App() {
         demo: project.liveDemoUrl,
       }))))
       .catch(() => setProjects([]));
+    fetch(`${apiUrl}/api/certificates`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then(setCertificates)
+      .catch(() => setCertificates([]));
   }, []);
 
   useEffect(() => {
@@ -222,13 +227,23 @@ export default function App() {
         </section>
 
         <section id="certifications" className="section alt">
-          <div className="container certification-card">
-            <div className="certificate-mark" aria-hidden="true">✓</div>
-            <div>
-              <p className="eyebrow">CERTIFICATIONS & ACHIEVEMENTS</p>
-              <h2>Continuous Learning</h2>
+          <div className="container">
+            <p className="eyebrow">CERTIFICATIONS & ACHIEVEMENTS</p>
+            <h2>Continuous Learning</h2>
+            {certificates.length ? <div className="certifications-grid">
+              {certificates.map((certificate) => <article className="certification-card" key={certificate.id}>
+                <div className="certificate-mark" aria-hidden="true">✓</div>
+                <div>
+                  <h3>{certificate.title}</h3>
+                  <p><strong>{certificate.issuer}</strong> · {certificate.issueYear}</p>
+                  {certificate.description && <p>{certificate.description}</p>}
+                  {certificate.fileUrl && <a className="certificate-link" href={certificate.fileUrl} target="_blank" rel="noreferrer">View Certificate</a>}
+                </div>
+              </article>)}
+            </div> : <div className="certification-card">
+              <div className="certificate-mark" aria-hidden="true">✓</div>
               <p>Professional certifications, training programs and achievements will be added soon.</p>
-            </div>
+            </div>}
           </div>
         </section>
 

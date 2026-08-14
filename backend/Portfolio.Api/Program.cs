@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Portfolio.Api.Services;
 using Portfolio.Application.Abstractions;
 using Portfolio.Application.Contacts;
+using Portfolio.Application.Certificates;
 using Portfolio.Application.Projects;
 using Portfolio.Infrastructure;
 using Portfolio.Infrastructure.Persistence;
@@ -31,8 +32,10 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped<CreateContactMessageService>();
 builder.Services.AddScoped<ContactMessageAdminService>();
 builder.Services.AddScoped<ProjectService>();
+builder.Services.AddScoped<CertificateService>();
 builder.Services.AddScoped<IContactMessageRepository, ContactMessageRepository>();
 builder.Services.AddScoped<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<ICertificateRepository, CertificateRepository>();
 var databaseProvider = builder.Configuration["DatabaseProvider"] ?? "SqlServer";
 var databaseConnection = builder.Configuration.GetConnectionString("PortfolioDatabase")
     ?? throw new InvalidOperationException("Portfolio database connection string is missing.");
@@ -89,10 +92,41 @@ using (var scope = app.Services.CreateScope())
                 );
             END
             """);
+        database.Database.ExecuteSqlRaw("""
+            IF OBJECT_ID(N'[dbo].[Certificates]', N'U') IS NULL
+            BEGIN
+                CREATE TABLE [dbo].[Certificates] (
+                    [Id] uniqueidentifier NOT NULL PRIMARY KEY,
+                    [Title] nvarchar(150) NOT NULL,
+                    [Issuer] nvarchar(150) NOT NULL,
+                    [IssueYear] int NOT NULL,
+                    [Description] nvarchar(1000) NOT NULL,
+                    [FileUrl] nvarchar(500) NULL,
+                    [FileType] nvarchar(20) NULL,
+                    [CreatedAt] datetimeoffset NOT NULL
+                );
+            END
+            """);
+    }
+    else if (database.Database.IsNpgsql())
+    {
+        database.Database.ExecuteSqlRaw("""
+            CREATE TABLE IF NOT EXISTS "Certificates" (
+                "Id" uuid NOT NULL PRIMARY KEY,
+                "Title" character varying(150) NOT NULL,
+                "Issuer" character varying(150) NOT NULL,
+                "IssueYear" integer NOT NULL,
+                "Description" character varying(1000) NOT NULL,
+                "FileUrl" character varying(500) NULL,
+                "FileType" character varying(20) NULL,
+                "CreatedAt" timestamp with time zone NOT NULL
+            );
+            """);
     }
 }
 
 app.UseCors("PortfolioFrontend");
+app.UseStaticFiles();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

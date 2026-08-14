@@ -7,6 +7,7 @@ public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> opti
 {
     public DbSet<ContactMessage> ContactMessages => Set<ContactMessage>();
     public DbSet<Project> Projects => Set<Project>();
+    public DbSet<Certificate> Certificates => Set<Certificate>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -29,5 +30,14 @@ public sealed class PortfolioDbContext(DbContextOptions<PortfolioDbContext> opti
         project.Property(item => item.Features).HasMaxLength(1500);
         project.Property(item => item.GitHubUrl).HasMaxLength(500);
         project.Property(item => item.LiveDemoUrl).HasMaxLength(500);
+
+        var certificate = modelBuilder.Entity<Certificate>();
+        certificate.ToTable("Certificates");
+        certificate.HasKey(item => item.Id);
+        certificate.Property(item => item.Title).HasMaxLength(150).IsRequired();
+        certificate.Property(item => item.Issuer).HasMaxLength(150).IsRequired();
+        certificate.Property(item => item.Description).HasMaxLength(1000);
+        certificate.Property(item => item.FileUrl).HasMaxLength(500);
+        certificate.Property(item => item.FileType).HasMaxLength(20);
     }
 }
