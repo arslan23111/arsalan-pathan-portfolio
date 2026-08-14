@@ -237,11 +237,16 @@ export default function App() {
             <div>
               <p className="eyebrow">PROFESSIONAL PROFILE</p>
               <h2>View My Resume</h2>
-              <p>My updated professional resume will be available here shortly.</p>
+              <p>View or download my latest professional resume.</p>
             </div>
-            <button className="btn resume-disabled" type="button" disabled>
-              Resume Coming Soon
-            </button>
+            <div className="resume-actions">
+              <a className="btn btn-outline" href="/Arsalan-Pathan-Resume.pdf" target="_blank" rel="noreferrer">
+                View Resume
+              </a>
+              <a className="btn" href="/Arsalan-Pathan-Resume.pdf" download="Arsalan-Pathan-Resume.pdf">
+                Download Resume
+              </a>
+            </div>
           </div>
         </section>
 
